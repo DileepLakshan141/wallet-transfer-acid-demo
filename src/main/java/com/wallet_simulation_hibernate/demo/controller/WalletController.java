@@ -1,6 +1,7 @@
 package com.wallet_simulation_hibernate.demo.controller;
 
 import com.wallet_simulation_hibernate.demo.dto.CreateWalletRequest;
+import com.wallet_simulation_hibernate.demo.dto.MoneyTransferRequest;
 import com.wallet_simulation_hibernate.demo.dto.UpdateOwnerNameRequest;
 import com.wallet_simulation_hibernate.demo.entity.Wallet;
 import com.wallet_simulation_hibernate.demo.service.WalletService;
@@ -35,5 +36,13 @@ public class WalletController {
     @PostMapping("/")
     public Wallet createWallet(@RequestBody @Valid CreateWalletRequest request){
         return this.walletService.createWallet(request);
+    }
+
+    @PatchMapping("/transfer")
+    public void executeMoneyTransfer(@RequestBody @Valid MoneyTransferRequest request){
+        this.walletService.transferMoneyNaive(
+                request.getFromWalletId() ,
+                request.getToWalletId() ,
+                request.getAmount());
     }
 }

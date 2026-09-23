@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Service
@@ -38,5 +39,22 @@ public class WalletService {
                 .balance(request.getBalance())
                 .build();
         return walletRepository.save(wallet);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void transferMoneyNaive(UUID fromWalletId, UUID toWalletId, BigDecimal amount){
+        Wallet fromWallet = walletRepository.findById(fromWalletId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Transferring Wallet not found!"));
+
+        BigDecimal remainingBalance = fromWallet.getBalance().subtract(amount);
+        if( remainingBalance.compareTo(BigDecimal.ZERO) < 0){
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Insufficient funds! Failed to proceed!");
+        }
+
+        fromWallet.setBalance(remainingBalance);
+        this.walletRepository.save(fromWallet);
+
+        Wallet toWallet = walletRepository.findById(toWalletId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Receiving Wallet not found!"));
+        toWallet.setBalance(toWallet.getBalance().add(amount));
+        this.walletRepository.save(toWallet);
     }
 }
