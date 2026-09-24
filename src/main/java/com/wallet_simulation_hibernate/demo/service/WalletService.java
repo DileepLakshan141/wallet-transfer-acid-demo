@@ -5,6 +5,7 @@ import com.wallet_simulation_hibernate.demo.entity.Wallet;
 import com.wallet_simulation_hibernate.demo.repositories.WalletRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -15,6 +16,7 @@ import java.util.UUID;
 @Service
 public class WalletService {
     private final WalletRepository walletRepository;
+    private final int MAX_RETRIES = 3;
 
     public WalletService(WalletRepository walletRepository) {
         this.walletRepository = walletRepository;
@@ -56,5 +58,26 @@ public class WalletService {
         Wallet toWallet = walletRepository.findById(toWalletId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Receiving Wallet not found!"));
         toWallet.setBalance(toWallet.getBalance().add(amount));
         this.walletRepository.save(toWallet);
+    }
+
+
+    public void transferMoneyWithRetries(
+            UUID fromId,
+            UUID toId,
+            BigDecimal amount
+    ){
+        int attempts = 0;
+        while(attempts < MAX_RETRIES){
+            try{
+                transferMoneyNaive(fromId,toId,amount);
+                return;
+            }
+            catch (ObjectOptimisticLockingFailureException e){
+                attempts++;
+                if(attempts >= MAX_RETRIES){
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Transfer failed after " + MAX_RETRIES + " due to concurrency modification");
+                }
+            }
+        }
     }
 }
