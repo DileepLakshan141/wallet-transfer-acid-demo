@@ -80,4 +80,29 @@ public class WalletService {
             }
         }
     }
+
+    @Transactional
+    public void transferMoneyPessimistic(
+            UUID fromId,
+            UUID toId,
+            BigDecimal amount
+    ){
+        Wallet fromWallet = this.walletRepository.findByIdForUpdate(fromId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transfer wallet not found"));
+
+        BigDecimal remainingBalance = fromWallet.getBalance().subtract(amount);
+
+        if(remainingBalance.compareTo(BigDecimal.ZERO) < 0){
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Transfer account not have sufficient balance");
+        }
+
+        fromWallet.setBalance(remainingBalance);
+        this.walletRepository.save(fromWallet);
+
+        Wallet toWallet = this.walletRepository.findByIdForUpdate(toId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Receiver wallet not found"));
+
+        toWallet.setBalance(toWallet.getBalance().add(amount));
+        this.walletRepository.save(toWallet);
+    }
 }

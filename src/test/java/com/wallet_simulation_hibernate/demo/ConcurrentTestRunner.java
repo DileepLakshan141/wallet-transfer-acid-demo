@@ -55,7 +55,7 @@ public class ConcurrentTestRunner {
                 startLatch.countDown();
                 startLatch.await();
 
-                walletService.transferMoneyWithRetries(fromWalletId, toIdB , new BigDecimal("500.00"));
+                walletService.transferMoneyPessimistic(fromWalletId, toIdB , new BigDecimal("500.00"));
                 System.out.println("Thread 1 (A -> B) completed");
 
             }catch (InterruptedException e){
@@ -70,7 +70,7 @@ public class ConcurrentTestRunner {
                 startLatch.countDown();
                 startLatch.await();
 
-                walletService.transferMoneyWithRetries(fromWalletId, toIdC, new BigDecimal("500.00"));
+                walletService.transferMoneyPessimistic(fromWalletId, toIdC, new BigDecimal("500.00"));
                 System.out.println("Thread 2 (A -> C) completed");
 
             } catch (InterruptedException e){
