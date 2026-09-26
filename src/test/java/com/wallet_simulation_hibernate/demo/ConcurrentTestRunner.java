@@ -33,21 +33,14 @@ public class ConcurrentTestRunner {
 
         Wallet walletB = Wallet.builder()
                 .ownerName("Wallet B")
-                .balance(BigDecimal.ZERO)
+                .balance(new BigDecimal("700.00"))
                 .build();
         walletB = walletRepository.save(walletB);
 
-        Wallet walletC = Wallet.builder()
-                .ownerName("Wallet C")
-                .balance(BigDecimal.ZERO)
-                .build();
-        walletC = walletRepository.save(walletC);
-
-        UUID fromWalletId = walletA.getId();
-        UUID toIdB = walletB.getId();
-        UUID toIdC = walletC.getId();
-
         CountDownLatch startLatch = new CountDownLatch(2);
+
+        UUID walletAId = walletA.getId();
+        UUID walletBId = walletB.getId();
 
 
         Thread thread1 = new Thread(() -> {
@@ -55,7 +48,7 @@ public class ConcurrentTestRunner {
                 startLatch.countDown();
                 startLatch.await();
 
-                walletService.transferMoneyPessimistic(fromWalletId, toIdB , new BigDecimal("500.00"));
+                walletService.transferMoneyFinal(walletAId, walletBId , new BigDecimal("400.00"));
                 System.out.println("Thread 1 (A -> B) completed");
 
             }catch (InterruptedException e){
@@ -70,8 +63,8 @@ public class ConcurrentTestRunner {
                 startLatch.countDown();
                 startLatch.await();
 
-                walletService.transferMoneyPessimistic(fromWalletId, toIdC, new BigDecimal("500.00"));
-                System.out.println("Thread 2 (A -> C) completed");
+                walletService.transferMoneyFinal(walletBId, walletAId, new BigDecimal("500.00"));
+                System.out.println("Thread 2 (B -> A) completed");
 
             } catch (InterruptedException e){
                 Thread.currentThread().interrupt();
@@ -88,9 +81,10 @@ public class ConcurrentTestRunner {
         thread1.join();
         thread2.join();
 
-        Wallet finalWallet = walletRepository.findById(fromWalletId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "wallet not found"));
-        System.out.println("Final Wallet Balance: " + finalWallet.getBalance());
-        System.out.println("Expected (correct): 0.00");
-        System.out.println("If you see 500.00 → Lost Update occurred (race condition confirmed)");
+        Wallet finalWalletA = walletRepository.findById(walletAId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "wallet not found"));
+        Wallet finalWalletB = walletRepository.findById(walletBId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "wallet not found"));
+        System.out.println("Final Wallet A Balance: " + finalWalletA.getBalance());
+        System.out.println("Final Wallet B Balance: " + finalWalletB.getBalance());
+        System.out.println("If you see 1100.00 and 600.00 → deadlock prevented");
     }
 }
